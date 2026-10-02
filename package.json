@@ -1,0 +1,1 @@
+{"name":"elliot-log","version":"1.0.0","private":true,"type":"module","scripts":{"build":"esbuild app.js --bundle --minify --outfile=dist/app.js","check":"node --check app.js"},"dependencies":{"@supabase/supabase-js":"2.117.2"},"devDependencies":{"esbuild":"0.28.2"}}
