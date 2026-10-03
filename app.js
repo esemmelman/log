@@ -1,6 +1,14 @@
 import {createClient} from '@supabase/supabase-js';
 const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable_JOUqLZDnfGu_yCa6k6FVDQ_AYwpr72i');
 const $=id=>document.getElementById(id);
+// Keep sign out with Add on phones, and in the header on desktop.
+const mobileLayout=window.matchMedia('(max-width:700px)');
+function positionSignout(){
+ const target=document.querySelector(mobileLayout.matches?'.aside-title':'header');
+ target.append($('signout'));
+}
+mobileLayout.addEventListener('change',positionSignout);
+positionSignout();
 let items=[],selected=null,user=null,editing=false,busy=false,request=0,changing=false,revealItem=null;
 let draft=null,saving=false,logOn=true;
 const report=message=>{$('status').textContent=message};
