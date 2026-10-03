@@ -7,6 +7,8 @@
 .add-icon{display:inline;width:auto;height:auto;font-size:20px;line-height:1;color:#60728a;cursor:pointer;font-weight:400}.add-icon:focus-visible,.rich-editor:focus-visible{outline:3px solid #79a8ff;outline-offset:2px}.editor-toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:#f8faff;border:1px solid #bbc8d9;border-radius:8px 8px 0 0;margin-top:8px}.editor-toolbar button{padding:6px 9px;font-size:14px;border-radius:4px}.rich-editor{min-height:280px;padding:14px;border:1px solid #bbc8d9;border-top:0;border-radius:0 0 8px 8px;margin-bottom:12px;line-height:1.5;overflow-wrap:anywhere}.rich-editor:empty:before{content:attr(data-placeholder);color:#60728a;pointer-events:none}.rich-editor p,.bubble p{margin:0 0 .6em}.bubble:has(p),.bubble:has(div),.bubble:has(ul),.bubble:has(ol){white-space:normal}#compose{border-top:0;padding-top:8px;margin-bottom:24px}#records{max-height:none}
 
 /* Plain compact item list; Log remains above the entries. */
+#log{position:relative;top:-12px;left:24px;background:#e5e7eb;border-color:#9ca3af;color:#374151}
+#log[aria-pressed=true]{background:#6b7280;border-color:#6b7280;color:white}
 #workspace{grid-template-columns:180px minmax(0,1fr);gap:16px;padding:16px;align-items:start;align-content:start;border:0;border-radius:0;overflow:visible;min-height:calc(100vh - 160px)}
 #workspace>aside{background:white;border:0;padding:0;min-width:0}
 .items-picker{grid-column:1;grid-row:1}.log-panel{grid-column:2;grid-row:1;padding:0;min-width:0}
