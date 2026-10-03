@@ -6,23 +6,20 @@
 
 .add-icon{display:inline;width:auto;height:auto;font-size:20px;line-height:1;color:#60728a;cursor:pointer;font-weight:400}.add-icon:focus-visible,.rich-editor:focus-visible{outline:3px solid #79a8ff;outline-offset:2px}.editor-toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:#f8faff;border:1px solid #bbc8d9;border-radius:8px 8px 0 0;margin-top:8px}.editor-toolbar button{padding:6px 9px;font-size:14px;border-radius:4px}.rich-editor{min-height:280px;padding:14px;border:1px solid #bbc8d9;border-top:0;border-radius:0 0 8px 8px;margin-bottom:12px;line-height:1.5;overflow-wrap:anywhere}.rich-editor:empty:before{content:attr(data-placeholder);color:#60728a;pointer-events:none}.rich-editor p,.bubble p{margin:0 0 .6em}.bubble:has(p),.bubble:has(div),.bubble:has(ul),.bubble:has(ol){white-space:normal}#compose{border-top:0;padding-top:8px;margin-bottom:24px}#records{max-height:none}
 
-/* Compact white item and view listboxes. */
-#workspace{grid-template-columns:220px minmax(0,1fr) 130px;gap:16px;padding:16px;align-items:start;align-content:start;border:0;border-radius:0;overflow:visible;min-height:calc(100vh - 160px)}
+/* Plain compact item list; Log remains above the entries. */
+#workspace{grid-template-columns:400px minmax(0,1fr);gap:16px;padding:16px;align-items:start;align-content:start;border:0;border-radius:0;overflow:visible;min-height:calc(100vh - 160px)}
 #workspace>aside{background:white;border:0;padding:0;min-width:0}
-.items-picker{grid-column:1;grid-row:1}.views-picker{grid-column:3;grid-row:1}.log-panel{grid-column:2;grid-row:1;padding:0;min-width:0}
+.items-picker{grid-column:1;grid-row:1}.log-panel{grid-column:2;grid-row:1;padding:0;min-width:0}
 .aside-title{padding:0 4px 8px;gap:8px}.aside-title h1{font-size:15px}
-#items,#views{background:white;border:1px solid #bbc8d9;border-radius:3px;padding:3px;overflow:auto}
-#items{min-height:90px;max-height:240px}#views{min-height:42px}
-#items [role=option],#views [role=option]{padding:7px 9px;margin:0;border-radius:2px;font-size:14px;line-height:1.35;min-height:34px}
-#items:focus-visible,#views:focus-visible{outline:3px solid #79a8ff;outline-offset:2px}
-#items [role=option]:hover,#views [role=option]:hover{background:#f0f5ff}
+#items{background:white;color:black;border:1px solid #858585;border-radius:0;padding:2px;min-height:90px;max-height:240px;overflow-y:scroll;font-family:Arial,sans-serif;font-size:16px}
+#items [role=option]{padding:0;margin:0;border:0;border-radius:0;font-size:16px;line-height:20px;min-height:20px;white-space:nowrap;overflow-wrap:normal}
+#items [aria-selected=true]{background:#1967d2;color:white;font-weight:400}
+#items:focus-visible{outline:3px solid #79a8ff;outline-offset:2px}
 .item-actions{padding-top:8px;margin-top:8px;border:0;gap:6px}.item-actions button{padding:7px 9px;font-size:13px}
 .empty{margin:50px 10px}.record-meta{flex-wrap:wrap;gap:4px 12px}
 @media(max-width:700px){
- #workspace{grid-template-columns:minmax(0,1fr) 100px;gap:12px;margin:10px;padding:10px;min-height:calc(100vh - 130px)}
- .items-picker{grid-column:1;grid-row:1}.views-picker{grid-column:2;grid-row:1;padding-top:29px!important}
- .log-panel{grid-column:1 / -1;grid-row:2;padding:0}
+ #workspace{grid-template-columns:minmax(0,1fr);gap:12px;margin:10px;padding:10px;min-height:calc(100vh - 130px)}
+ .items-picker{grid-column:1;grid-row:1}.log-panel{grid-column:1;grid-row:2;padding:0}
  #items{min-height:86px;max-height:160px}
- #items [role=option],#views [role=option]{min-height:44px;padding:12px 9px}
  .empty{margin:25px 8px}.compose-footer{gap:10px}.record{max-width:95%}
 }
