@@ -7,7 +7,7 @@
 .add-icon{display:inline;width:auto;height:auto;font-size:20px;line-height:1;color:#60728a;cursor:pointer;font-weight:400}.add-icon:focus-visible,.rich-editor:focus-visible{outline:3px solid #79a8ff;outline-offset:2px}.editor-toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:#f8faff;border:1px solid #bbc8d9;border-radius:8px 8px 0 0;margin-top:8px}.editor-toolbar button{padding:6px 9px;font-size:14px;border-radius:4px}.rich-editor{min-height:280px;padding:14px;border:1px solid #bbc8d9;border-top:0;border-radius:0 0 8px 8px;margin-bottom:12px;line-height:1.5;overflow-wrap:anywhere}.rich-editor:empty:before{content:attr(data-placeholder);color:#60728a;pointer-events:none}.rich-editor p,.bubble p{margin:0 0 .6em}.bubble:has(p),.bubble:has(div),.bubble:has(ul),.bubble:has(ol){white-space:normal}#compose{border-top:0;padding-top:8px;margin-bottom:24px}#records{max-height:none}
 
 /* Plain compact item list; Log remains above the entries. */
-#workspace{grid-template-columns:280px minmax(0,1fr);gap:16px;padding:16px;align-items:start;align-content:start;border:0;border-radius:0;overflow:visible;min-height:calc(100vh - 160px)}
+#workspace{grid-template-columns:180px minmax(0,1fr);gap:16px;padding:16px;align-items:start;align-content:start;border:0;border-radius:0;overflow:visible;min-height:calc(100vh - 160px)}
 #workspace>aside{background:white;border:0;padding:0;min-width:0}
 .items-picker{grid-column:1;grid-row:1}.log-panel{grid-column:2;grid-row:1;padding:0;min-width:0}
 .aside-title{padding:0 4px 8px;gap:8px}.aside-title h1{font-size:15px}
@@ -20,6 +20,7 @@
 @media(max-width:700px){
  #workspace{grid-template-columns:minmax(0,1fr);gap:12px;margin:10px;padding:10px;min-height:calc(100vh - 130px)}
  .items-picker{grid-column:1;grid-row:1}.log-panel{grid-column:1;grid-row:2;padding:0}
+ .items-picker{width:180px;max-width:100%}
  #items{min-height:86px;max-height:160px}
  .empty{margin:25px 8px}.compose-footer{gap:10px}.record{max-width:95%}
 }
