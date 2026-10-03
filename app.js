@@ -9,6 +9,17 @@ function positionSignout(){
 }
 mobileLayout.addEventListener('change',positionSignout);
 positionSignout();
+const entryControl=document.createElement('div');
+entryControl.className='mobile-entry-control';
+const addEntry=document.createElement('button');
+addEntry.type='button';
+addEntry.id='add-entry';
+addEntry.textContent='+';
+addEntry.setAttribute('aria-label','Add entry');
+addEntry.title='Add entry';
+addEntry.onclick=()=>newEntry().catch(e=>report(e.message));
+entryControl.append(addEntry);
+$('conversation').prepend(entryControl);
 let items=[],selected=null,user=null,editing=false,busy=false,request=0,changing=false,revealItem=null;
 let draft=null,saving=false,logOn=true;
 const report=message=>{$('status').textContent=message};
