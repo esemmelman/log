@@ -26,3 +26,7 @@
  #items{min-height:86px;max-height:160px}
  .empty{margin:25px 8px}.compose-footer{gap:10px}.record{max-width:95%}
 }
+
+/* Give Me entries a little more space from the item list. */
+.record:not(.other){margin-left:20px;max-width:min(80%,calc(100% - 20px))}
+@media(max-width:700px){.record:not(.other){max-width:calc(100% - 20px)}}
