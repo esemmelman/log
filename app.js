@@ -9,8 +9,6 @@ function positionSignout(){
 }
 mobileLayout.addEventListener('change',positionSignout);
 positionSignout();
-const entryControl=document.createElement('div');
-entryControl.className='entry-control';
 const addEntry=document.createElement('button');
 addEntry.type='button';
 addEntry.id='add-entry';
@@ -18,8 +16,7 @@ addEntry.textContent='+';
 addEntry.setAttribute('aria-label','Add entry');
 addEntry.title='Add entry';
 addEntry.onclick=()=>newEntry().catch(e=>report(e.message));
-entryControl.append(addEntry);
-$('conversation').prepend(entryControl);
+$('count').replaceWith(addEntry);
 let items=[],selected=null,user=null,editing=false,busy=false,request=0,changing=false,revealItem=null;
 let draft=null,saving=false,logOn=true;
 const report=message=>{$('status').textContent=message};
@@ -46,7 +43,7 @@ $('body').onpaste=e=>{e.preventDefault();document.execCommand('insertText',false
 const speaker=()=>document.querySelector('input[name=speaker]:checked').value;
 function clearDraft(){draft=null;$('body').innerHTML='';$('compose').hidden=true}
 function resetLog(){request++;clearDraft();$('conversation').hidden=true;$('welcome').hidden=false;$('records').replaceChildren();$('item-actions').hidden=true}
-function renderItems(){items.sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));const list=$('items');list.replaceChildren();$('count').textContent=items.length;for(const item of items){const row=document.createElement('div');row.setAttribute('role','option');row.setAttribute('aria-selected',String(selected?.id===item.id));row.id='item-'+item.id;row.textContent=item.name;list.append(row)}updateSelection()}
+function renderItems(){items.sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));const list=$('items');list.replaceChildren();for(const item of items){const row=document.createElement('div');row.setAttribute('role','option');row.setAttribute('aria-selected',String(selected?.id===item.id));row.id='item-'+item.id;row.textContent=item.name;list.append(row)}updateSelection()}
 function updateLogToggle(){$('log').setAttribute('aria-pressed',String(logOn));$('log').classList.toggle('primary',logOn)}
 updateLogToggle();
 function updateSelection(){for(const row of $('items').children)row.setAttribute('aria-selected',String(row.id==='item-'+selected?.id));if(selected)$('items').setAttribute('aria-activedescendant','item-'+selected.id);else $('items').removeAttribute('aria-activedescendant');for(const id of ['change','delete'])$(id).disabled=!selected}
