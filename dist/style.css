@@ -34,13 +34,12 @@
 #add{border:0;background:transparent;border-radius:0;padding:0;font-size:15px;line-height:20px;font-weight:600;color:#17283d}
 
 /* Put the mobile item controls at the top without the brand header. */
-.mobile-entry-control{display:none}
+.entry-control{display:flex;justify-content:flex-end;margin-bottom:4px}
+#add-entry{width:36px;height:36px;padding:0;font-size:26px;line-height:1;font-weight:400}
 @media(max-width:700px){
  header{display:none}
  #status:empty{min-height:0;padding:0}
  #workspace{margin:0 10px 10px;padding-top:8px;min-height:calc(100dvh - 18px)}
  .aside-title #signout{padding:3px 6px;font-size:11px;line-height:16px;border-radius:5px;white-space:nowrap}
  #items [role=option]{padding:3px 0;min-height:26px}
- .mobile-entry-control{display:flex;justify-content:flex-end;margin-bottom:4px}
- #add-entry{width:36px;height:36px;padding:0;font-size:26px;line-height:1;font-weight:400}
 }
