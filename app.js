@@ -1,6 +1,8 @@
 import {createClient} from '@supabase/supabase-js';
+import {version} from './package.json';
 const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable_JOUqLZDnfGu_yCa6k6FVDQ_AYwpr72i');
 const $=id=>document.getElementById(id), entry=$('entry');
+$('version').textContent='v'+version;
 if(/Android/i.test(navigator.userAgent))document.documentElement.classList.add('android');
 let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0;
 const check=r=>{if(r.error)throw r.error;return r.data};
@@ -123,6 +125,7 @@ async function setSession(session){
 db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
 db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
 window.addEventListener('beforeunload',e=>{if(entry.value.trim()||saving||recognition){e.preventDefault();e.returnValue=''}});
+
 
 
 

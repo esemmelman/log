@@ -14,8 +14,8 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
   limit:async()=>({data:[{id:'log'}]}),maybeSingle:async()=>({data:null}),
   insert(row){saved.push(row);return this},single:async()=>({data:{id:'record'}}),range:async()=>({data:[]})
  }}};
- const context=vm.createContext({createClient:()=>db,document:{getElementById:get,createElement:element,documentElement:element()},window:{SpeechRecognition:Speech,addEventListener(){}},navigator:{userAgent:'Android',language:'en-US'},crypto:{randomUUID:()=> 'stable-id'},setTimeout(fn,ms){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)}});
- vm.runInContext(fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*\n/,''),context);
+ const context=vm.createContext({version:'test',createClient:()=>db,document:{getElementById:get,createElement:element,documentElement:element()},window:{SpeechRecognition:Speech,addEventListener(){}},navigator:{userAgent:'Android',language:'en-US'},crypto:{randomUUID:()=> 'stable-id'},setTimeout(fn,ms){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)}});
+ vm.runInContext(fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,''),context);
  vm.runInContext('startAudio()',context);
  assert.equal(session.interimResults,false);
  const result=(text,isFinal)=>Object.assign([{transcript:text}],{isFinal});
@@ -36,3 +36,4 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
  assert.equal(saved.length,1);
  assert.equal(saved[0].body,'Send the emails to families. Yes yes, tomorrow.');
 });
+

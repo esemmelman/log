@@ -2,3 +2,5 @@
 
 /* Larger Android entry text; retain the timestamp size. */
 html.android{font-size:20px}html.android #entry,html.android #search{font-size:20px}
+
+footer{display:flex;align-items:center;justify-content:space-between;gap:16px}#version{font-size:13px;color:#6a7789}
