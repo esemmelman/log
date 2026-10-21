@@ -61,23 +61,28 @@ async function save(){
 function armSilence(){clearTimeout(silenceTimer);silenceTimer=setTimeout(finishAudio,3000)}
 function finishAudio(){
  clearTimeout(silenceTimer);if(!recognition)return;
- mode='finishing';report('Finishing transcription…');recognition.stop();
- // Some engines never emit end after stop; retain their latest interim result.
+ mode='finishing';report('Finishing transcription…');
+ // Arm before stop: an engine may emit end synchronously.
  stopTimer=setTimeout(()=>save(),1500);
+ recognition.stop();
 }
 function startAudio(){
  if(saving||mode==='text'||recognition)return;
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!Speech){textMode('Voice entry is unavailable in this browser. Type an entry and press Enter.');return}
  const session=new Speech();recognition=session;mode='audio';entry.readOnly=true;
- session.continuous=true;session.interimResults=true;session.lang=navigator.language||'en-US';
+ session.continuous=true;session.interimResults=false;session.lang=navigator.language||'en-US';
  entry.classList.add('listening');report('Listening… Saves after 3 seconds of silence.');
  session.onstart=()=>armSilence();
  session.onspeechstart=()=>clearTimeout(silenceTimer);
  session.onspeechend=()=>armSilence();
  session.onresult=e=>{
   if(recognition!==session)return;
-  entry.value=Array.from(e.results,r=>r[0].transcript).join(' ').trim();
+  // Android can return a history of growing interim hypotheses. Only final
+  // segments belong in the entry; rebuild from the session snapshot on each event.
+  const finalResults=Array.from(e.results).filter(r=>r.isFinal);
+  if(!finalResults.length)return;
+  entry.value=finalResults.map(r=>r[0].transcript).join(' ').trim();
   if(mode==='audio')armSilence();
  };
  session.onerror=e=>{
@@ -118,4 +123,6 @@ async function setSession(session){
 db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
 db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
 window.addEventListener('beforeunload',e=>{if(entry.value.trim()||saving||recognition){e.preventDefault();e.returnValue=''}});
+
+
 
