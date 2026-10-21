@@ -1,13 +1,15 @@
 # Log
 
-Live app: https://esemmelman.github.io/log/. GitHub Pages automatically builds and deploys updates pushed to `main` through `.github/workflows/pages.yml`.
+Live app: https://esemmelman.github.io/log/. Pushes to `main` automatically build and deploy through GitHub Pages.
 
-A responsive item list with a separate dated conversation log for each item. Use Add above the listbox to add an item. A plain white, compact listbox shows items on the left on desktop and above the entries on phones. The compact Log button sits to the left of the item list on desktop, aligned with its first row. On phones, the listbox sits at the far left and Log at the far right. Log is an on/off toggle that starts on whenever the app opens. While it is on, single-click an item to highlight it and display its entries. Click Log to hide entries and turn automatic display off, or click it again to display the selected item's entries and turn automatic display on; double-click the item to reveal Change and Delete. Click the + button at the right above the listbox to open a rich text entry field in the entry panel, with previous entries below it, newest first. The + button appears on desktop and phones; double-clicking Log also opens an entry. The toolbar supports undo/redo, text styles, headings, lists, alignment, and links. Choose Me or Other. Click Save to add an entry or Cancel to discard the draft. Entries never save automatically. Save or cancel before switching items, starting another entry, or signing out. Saved entries show dates without Me or Other labels. Me entries have a small left inset and Other entries remain further indented. Dates use the browser's timezone and display MM-DD ddd. h:mm am/pm. Original timestamps are assigned by the database and cannot be edited through the client. Keyboard equivalents: Enter on the item list reveals actions, and Enter or Space on the Log button toggles Log, and Shift+Enter on Log opens an entry.
+The top entry box supports two modes:
+- Click once to dictate. Speech is transcribed to text and saved after three seconds without speech input. Microphone permission and a browser supporting SpeechRecognition are required.
+- Double-click (or press F2) to type. Press Enter to save. Escape stops dictation and keeps the transcript for editing.
 
-Backend: Supabase project `bnaimitzvah` (`fgomaujsdblpzxhnnqrg`). Dedicated tables: `elliot_log_items_v1` and `elliot_log_records_v1`. Each signed-in user can access only their own items and records. Use an existing email/password account in this project. Deleting an item removes its records.
+Search filters all saved entries. Entries appear in descending date/time order, using the browser timezone. Existing entries from every previous item remain visible. New entries use a backing item named Log in the existing private tables. Audio recordings are not stored; the transcript is saved. Failed saves retain the text; press Enter to retry.
+
+Sign in with an existing bnaimitzvah email/password account. Supabase project: `fgomaujsdblpzxhnnqrg`. Existing row-level policies keep each user's data private. No schema change is required.
 
 ## Build
 
-Run `npm ci`, `npm run check`, and `npm run build`. Serve `dist/` using a static server. The committed browser key is a publishable key; no service-role credentials are used. Database schema is in `schema.sql` and has already been applied to the project. Do not rerun it against existing tables.
-
-Sites hosting is configured in `.openai/hosting.json`. The autosave update policy is recorded in `autosave-schema.sql` and has already been applied.
+Run `npm ci`, `npm run check`, and `npm run build`. Serve `dist/` using a static server. The committed key is publishable. Do not rerun `schema.sql` against existing tables.

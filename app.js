@@ -1,89 +1,119 @@
 import {createClient} from '@supabase/supabase-js';
 const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable_JOUqLZDnfGu_yCa6k6FVDQ_AYwpr72i');
-const $=id=>document.getElementById(id);
-// Keep sign out with Add on phones, and in the header on desktop.
-const mobileLayout=window.matchMedia('(max-width:700px)');
-function positionSignout(){
- const target=document.querySelector(mobileLayout.matches?'.aside-title':'header');
- target.append($('signout'));
-}
-mobileLayout.addEventListener('change',positionSignout);
-positionSignout();
-const addEntry=document.createElement('button');
-addEntry.type='button';
-addEntry.id='add-entry';
-addEntry.textContent='+';
-addEntry.setAttribute('aria-label','Add entry');
-addEntry.title='Add entry';
-addEntry.onclick=()=>newEntry().catch(e=>report(e.message));
-$('count').replaceWith(addEntry);
-let items=[],selected=null,user=null,editing=false,busy=false,request=0,changing=false,revealItem=null;
-let draft=null,saving=false,logOn=true;
+const $=id=>document.getElementById(id), entry=$('entry');
+let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0;
+const check=r=>{if(r.error)throw r.error;return r.data};
 const report=message=>{$('status').textContent=message};
-function check(r){if(r.error)throw r.error;return r.data}
-async function run(fn){if(busy)return;busy=true;document.querySelectorAll('button[type=submit]').forEach(b=>b.disabled=true);report('');try{await fn()}catch(e){report(e.message||'Unable to save. Please try again.')}finally{busy=false;document.querySelectorAll('button[type=submit]').forEach(b=>b.disabled=false)}}
-const RICH_PREFIX='<!--log-rich-v1-->';
-const editorText=()=>($('body').textContent||'').trim();
-function cleanHTML(html){
- const template=document.createElement('template');template.innerHTML=html;
- const allowed=new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','STRIKE','H2','H3','UL','OL','LI','BLOCKQUOTE','A','SPAN']);
- for(const node of [...template.content.querySelectorAll('*')]){
-  if(['SCRIPT','STYLE','IFRAME','OBJECT','SVG','MATH'].includes(node.tagName)){node.remove();continue}
-  if(!allowed.has(node.tagName)){node.replaceWith(...node.childNodes);continue}
-  const href=node.getAttribute('href'),align=node.style.textAlign;
-  for(const attr of [...node.attributes])node.removeAttribute(attr.name);
-  if(['left','center','right'].includes(align))node.style.textAlign=align;
-  if(node.tagName==='A'&&href&&/^(https?:|mailto:)/i.test(href)){node.setAttribute('href',href);node.setAttribute('target','_blank');node.setAttribute('rel','noopener noreferrer')}
+function textBody(body){
+ if(!body.startsWith('<!--log-rich-v1-->'))return body;
+ const doc=new DOMParser().parseFromString(body.slice(18),'text/html');
+ doc.querySelectorAll('script,style,iframe,object').forEach(n=>n.remove());
+ doc.querySelectorAll('br').forEach(n=>n.replaceWith('\n'));
+ doc.querySelectorAll('p,div,li,h2,h3,blockquote').forEach(n=>n.append('\n'));
+ return doc.body.textContent.trim();
+}
+function render(){
+ const query=$('search').value.trim().toLocaleLowerCase();
+ const visible=rows.filter(r=>r.text.toLocaleLowerCase().includes(query));
+ $('records').replaceChildren();
+ for(const row of visible){
+  const article=document.createElement('article'),time=document.createElement('time'),body=document.createElement('p');
+  time.dateTime=row.created_at;time.textContent=new Date(row.created_at).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  body.textContent=row.text;article.append(time,body);$('records').append(article);
  }
- return template.innerHTML;
+ $('empty').textContent=visible.length?'':query?'No matching entries.':'No entries yet.';
 }
-$('editor-toolbar').onmousedown=e=>{if(e.target.closest('button'))e.preventDefault()};
-$('editor-toolbar').onclick=e=>{const button=e.target.closest('button');if(!button||button.disabled)return;let value=button.dataset.value||null;if(button.dataset.command==='createLink'){value=prompt('Link URL (https:// or mailto:)');if(!value||!/^(https?:|mailto:)/i.test(value))return}$('body').focus();document.execCommand(button.dataset.command,false,value)};
-$('body').onpaste=e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'))};
-const speaker=()=>document.querySelector('input[name=speaker]:checked').value;
-function clearDraft(){draft=null;$('body').innerHTML='';$('compose').hidden=true}
-function resetLog(){request++;clearDraft();$('conversation').hidden=true;$('welcome').hidden=false;$('records').replaceChildren();$('item-actions').hidden=true}
-function renderItems(){items.sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));const list=$('items');list.replaceChildren();for(const item of items){const row=document.createElement('div');row.setAttribute('role','option');row.setAttribute('aria-selected',String(selected?.id===item.id));row.id='item-'+item.id;row.textContent=item.name;list.append(row)}updateSelection()}
-function updateLogToggle(){$('log').setAttribute('aria-pressed',String(logOn));$('log').classList.toggle('primary',logOn)}
-updateLogToggle();
-function updateSelection(){for(const row of $('items').children)row.setAttribute('aria-selected',String(row.id==='item-'+selected?.id));if(selected)$('items').setAttribute('aria-activedescendant','item-'+selected.id);else $('items').removeAttribute('aria-activedescendant');for(const id of ['change','delete'])$(id).disabled=!selected}
-async function select(id){if(changing||id===selected?.id)return;revealItem=null;changing=true;$('body').contentEditable='false';try{await flushDraft();selected=items.find(i=>i.id===id)||null;resetLog();updateSelection();}catch(e){report(e.message)}finally{changing=false;$('body').contentEditable='true';if(revealItem===selected?.id)$('item-actions').hidden=false}if(logOn&&selected)try{await openLog()}catch(e){report(e.message)}}
-// Keep option nodes stable between the two clicks of a double-click.
-$('items').onclick=e=>{const row=e.target.closest('[role=option]');if(row)select(row.id.slice(5))};
-$('items').ondblclick=async e=>{const row=e.target.closest('[role=option]');if(!row)return;const id=row.id.slice(5);if(!changing)await select(id);revealItem=id;if(selected?.id===id)$('item-actions').hidden=false};
-$('items').onkeydown=e=>{if(e.key==='Enter'&&selected){$('item-actions').hidden=false;return}if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key)||!items.length)return;e.preventDefault();let i=items.findIndex(x=>x.id===selected?.id);i=e.key==='Home'?0:e.key==='End'?items.length-1:e.key==='ArrowDown'?Math.min(i+1,items.length-1):Math.max(i-1,0);select(items[i].id);$('item-'+items[i].id).scrollIntoView({block:'nearest'})};
-async function loadItems(){items=check(await db.from('elliot_log_items_v1').select('id,name,created_at').order('created_at').order('id'));selected=items.find(i=>i.id===selected?.id)||null;renderItems()}
-function dateLabel(value){const d=new Date(value);return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${new Intl.DateTimeFormat('en-US',{weekday:'short'}).format(d)}. ${d.getHours()%12||12}:${String(d.getMinutes()).padStart(2,'0')} ${d.getHours()<12?'am':'pm'}`}
-async function openLog(){if(!selected)return;const itemId=selected.id,seq=++request;$('welcome').hidden=true;$('conversation').hidden=false;const rows=[];for(let from=0;;from+=500){const batch=check(await db.from('elliot_log_records_v1').select('id,speaker,body,created_at').eq('item_id',itemId).order('created_at',{ascending:false}).order('id',{ascending:false}).range(from,from+499));rows.push(...batch);if(batch.length<500)break}if(seq!==request||selected?.id!==itemId)return;const records=$('records');records.replaceChildren();if(!rows.length){const p=document.createElement('p');p.textContent='No entries yet. Click + to add one.';p.style.color='#60728a';records.append(p)}for(const row of rows){const article=document.createElement('article');article.className='record'+(row.speaker==='Other'?' other':'');const meta=document.createElement('div');meta.className='record-meta';const time=document.createElement('time');time.dateTime=row.created_at;time.textContent=dateLabel(row.created_at);time.title=new Date(row.created_at).toLocaleString();meta.append(time);const bubble=document.createElement('div');bubble.className='bubble';if(row.body.startsWith(RICH_PREFIX))bubble.innerHTML=cleanHTML(row.body.slice(RICH_PREFIX.length));else bubble.textContent=row.body;article.append(meta,bubble);records.append(article)}records.scrollTop=0}
-async function saveDraft(){
-  if(!draft||saving)return;
-  const current=draft,body=editorText(),who=speaker();
-  if(!body){$('save-status').textContent='Enter text before saving.';$('body').focus();return}
-  if(body.length>20000){$('save-status').textContent='Please keep entries under 20,000 characters.';return}
-  saving=true;setComposeDisabled(true);$('save-status').textContent='Saving…';
-  try{
-    // Reuse the ID on retries if a response was lost after a successful insert.
-    const found=check(await db.from('elliot_log_records_v1').select('id').eq('id',current.id).maybeSingle());
-    if(!found)check(await db.from('elliot_log_records_v1').insert({id:current.id,item_id:current.itemId,body:RICH_PREFIX+cleanHTML($('body').innerHTML),speaker:who}).select().single());
-    clearDraft();report('');await openLog();
-  }catch(e){$('save-status').textContent='Not saved. '+e.message;report('Entry could not be saved. Your text is still in the entry field.');throw e}
-  finally{saving=false;setComposeDisabled(false)}
+async function load(){
+ const version=++loadVersion,result=[];
+ for(let from=0;;from+=500){
+  const batch=check(await db.from('elliot_log_records_v1').select('id,body,created_at').order('created_at',{ascending:false}).order('id',{ascending:false}).range(from,from+499));
+  result.push(...batch);if(batch.length<500)break;
+ }
+ if(version!==loadVersion)return;
+ rows=result.map(r=>({...r,text:textBody(r.body)}));render();
 }
-function setComposeDisabled(value){$('body').contentEditable=String(!value);$('editor-toolbar').querySelectorAll('button').forEach(b=>b.disabled=value);$('save-entry').disabled=value;$('cancel-entry').disabled=value;document.querySelectorAll('input[name=speaker]').forEach(r=>r.disabled=value)}
-async function flushDraft(){if(saving)throw Error('Please wait for the entry to finish saving.');if(draft)throw Error('Save or cancel your entry before continuing.')}
-$('compose').onsubmit=e=>{e.preventDefault();saveDraft().catch(()=>{})};
-$('cancel-entry').onclick=()=>{if(!saving){clearDraft();report('')}};
-$('log').onclick=e=>{if(e.detail>1)return;run(async()=>{await flushDraft();logOn=!logOn;updateLogToggle();if(logOn)await openLog();else resetLog()})};
-async function newEntry(){if(!selected||changing)return;changing=true;$('body').contentEditable='false';try{await flushDraft();logOn=true;updateLogToggle();await openLog();draft={id:crypto.randomUUID(),itemId:selected.id};$('body').innerHTML='';$('compose').hidden=false;$('save-status').textContent='Click Save to add this entry, or Cancel to discard it.'}finally{changing=false;$('body').contentEditable='true';$('body').focus()}}
-$('log').onkeydown=e=>{if(e.key==='Enter'&&e.shiftKey){e.preventDefault();newEntry().catch(e=>report(e.message))}};
-$('log').ondblclick=()=>{newEntry().catch(e=>report(e.message))};
-function itemDialog(change){editing=change;$('dialog-title').textContent=change?'Change item':'Add item';$('item-name').value=change?selected.name:'';$('item-dialog').showModal();$('item-name').focus()}
-$('add').onclick=()=>itemDialog(false);$('add').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();itemDialog(false)}};$('change').onclick=()=>selected&&itemDialog(true);$('cancel').onclick=()=>$('item-dialog').close();
-$('item-form').onsubmit=e=>{e.preventDefault();run(async()=>{const name=$('item-name').value.trim();if(!name)throw Error('Enter an item name.');await flushDraft();if(editing){if(!selected)throw Error('Select an item first.');check(await db.from('elliot_log_items_v1').update({name}).eq('id',selected.id).select().single())}else{selected=check(await db.from('elliot_log_items_v1').insert({name}).select().single());resetLog()}await loadItems();$('item-dialog').close();if(logOn)await openLog()})};
-$('delete').onclick=()=>{if(!selected||!confirm(`Delete “${selected.name}” and all its log entries?`))return;run(async()=>{await flushDraft();check(await db.from('elliot_log_items_v1').delete().eq('id',selected.id).select().single());selected=null;resetLog();await loadItems()})};
-$('login').onsubmit=e=>{e.preventDefault();run(async()=>{check(await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value}));$('password').value=''})};
-$('signout').onclick=()=>run(async()=>{await flushDraft();check(await db.auth.signOut())});
-async function setSession(session){const next=session?.user||null;if(user?.id===next?.id)return;user=next;selected=null;items=[];resetLog();$('auth').hidden=!!user;$('workspace').hidden=!user;$('signout').hidden=!user;renderItems();if(user){try{await loadItems()}catch(e){report(e.message)}}}
-db.auth.onAuthStateChange((event,session)=>{setTimeout(()=>setSession(session),0)});
+function textMode(message='Type an entry, then press Enter to save.'){
+ clearTimeout(clickTimer);stopAudio();mode='text';entry.readOnly=false;entry.placeholder='Type an entry…';entry.focus();report(message);
+}
+function stopAudio(){
+ clearTimeout(silenceTimer);clearTimeout(stopTimer);
+ const old=recognition;recognition=null;if(old){old.onend=null;old.onresult=null;old.onerror=null;old.abort()}
+ entry.classList.remove('listening');
+}
+function idle(){mode='idle';entry.readOnly=true;entry.placeholder='Click to speak · Double-click to type';entry.classList.remove('listening')}
+async function save(){
+ const body=entry.value.trim();if(saving||!body){if(!body){stopAudio();idle();report('No speech detected. Click to try again, or double-click to type.')}return}
+ if(body.length>20000){textMode('Keep entries under 20,000 characters.');return}
+ saving=true;stopAudio();entry.disabled=true;report('Saving…');draftId??=crypto.randomUUID();
+ try{
+  if(!itemId){
+   const items=check(await db.from('elliot_log_items_v1').select('id').eq('name','Log').order('created_at').limit(1));
+   itemId=items[0]?.id||check(await db.from('elliot_log_items_v1').insert({name:'Log'}).select('id').single()).id;
+  }
+  const existing=check(await db.from('elliot_log_records_v1').select('id').eq('id',draftId).maybeSingle());
+  if(!existing)check(await db.from('elliot_log_records_v1').insert({id:draftId,item_id:itemId,speaker:'Me',body}).select('id').single());
+  entry.value='';draftId=null;idle();report('Saved.');
+  try{await load()}catch(e){report('Saved, but the list could not refresh. Reload to see the entry.')}
+ }catch(e){textMode('Not saved. Your entry is still here. Press Enter to retry. '+e.message)}
+ finally{saving=false;entry.disabled=false;entry.focus()}
+}
+function armSilence(){clearTimeout(silenceTimer);silenceTimer=setTimeout(finishAudio,3000)}
+function finishAudio(){
+ clearTimeout(silenceTimer);if(!recognition)return;
+ mode='finishing';report('Finishing transcription…');recognition.stop();
+ // Some engines never emit end after stop; retain their latest interim result.
+ stopTimer=setTimeout(()=>save(),1500);
+}
+function startAudio(){
+ if(saving||mode==='text'||recognition)return;
+ const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Speech){textMode('Voice entry is unavailable in this browser. Type an entry and press Enter.');return}
+ const session=new Speech();recognition=session;mode='audio';entry.readOnly=true;
+ session.continuous=true;session.interimResults=true;session.lang=navigator.language||'en-US';
+ entry.classList.add('listening');report('Listening… Saves after 3 seconds of silence.');
+ session.onstart=()=>armSilence();
+ session.onspeechstart=()=>clearTimeout(silenceTimer);
+ session.onspeechend=()=>armSilence();
+ session.onresult=e=>{
+  if(recognition!==session)return;
+  entry.value=Array.from(e.results,r=>r[0].transcript).join(' ').trim();
+  if(mode==='audio')armSilence();
+ };
+ session.onerror=e=>{
+  if(recognition!==session)return;
+  textMode(e.error==='not-allowed'?'Microphone access was denied. Allow it in browser settings, or type here.':'Voice entry stopped. Review the text and press Enter to save.');
+ };
+ session.onend=()=>{
+  if(recognition!==session)return;
+  if(mode==='finishing'){clearTimeout(stopTimer);save();return}
+  // Retain the three-second pause even if the browser ends recognition early.
+  session.onend=null;armSilence();
+ };
+ try{session.start()}catch(e){textMode('Unable to start the microphone. Type here and press Enter.')}
+}
+entry.onclick=e=>{if(mode==='text'||saving)return;clearTimeout(clickTimer);if(e.detail<2)clickTimer=setTimeout(startAudio,400)};
+entry.ondblclick=()=>{if(!saving)textMode()};
+entry.onkeydown=e=>{
+ if(e.isComposing)return;
+ if(e.key==='Enter'){e.preventDefault();clearTimeout(clickTimer);if(mode==='text')save();else if(mode==='idle')startAudio()}
+ if(e.key==='F2'){e.preventDefault();textMode()}
+ if(e.key==='Escape'){stopAudio();entry.value?textMode():idle();report('Voice entry stopped.')}
+};
+$('search').oninput=render;
+$('login').onsubmit=async e=>{
+ e.preventDefault();const button=e.submitter;button.disabled=true;report('Signing in…');
+ try{check(await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value}));$('password').value=''}catch(e){report(e.message)}finally{button.disabled=false}
+};
+$('signout').onclick=async()=>{
+ if(saving||entry.value.trim()||recognition){report('Save your entry with Enter, or clear it before signing out.');return}
+ try{check(await db.auth.signOut())}catch(e){report(e.message)}
+};
+async function setSession(session){
+ const next=session?.user||null;if(user?.id===next?.id)return;
+ stopAudio();clearTimeout(clickTimer);loadVersion++;user=next;rows=[];itemId=null;draftId=null;entry.value='';idle();render();
+ $('auth').hidden=!!user;$('workspace').hidden=!user;report('');
+ if(user)try{await load()}catch(e){report('Unable to load entries. '+e.message)}
+}
+db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
 db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
-window.addEventListener('beforeunload',e=>{if(draft&&editorText()){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(entry.value.trim()||saving||recognition){e.preventDefault();e.returnValue=''}});
