@@ -86,12 +86,25 @@ function finishAudio(){
 }
 function collapseSpeechHistory(parts){
  const key=text=>text.trim().toLocaleLowerCase().replace(/[.,!?;:]+$/g,'').replace(/\s+/g,' ');
+ const revises=(previous,next)=>{
+  if(next.startsWith(previous+' '))return true;
+  const before=previous.split(' '),after=next.split(' ');
+  let shared=0;
+  while(shared<Math.min(before.length,after.length)&&before[shared]===after[shared])shared++;
+  // Android can append a replacement hypothesis with a corrected ending,
+  // e.g. "...pay for sclero" followed by "...pay for scleral lenses".
+  // Require a substantial shared phrase and limit changes to its last words.
+  const oldWord=before[shared]||'',newWord=after[shared]||'';
+  let letters=0;
+  while(letters<Math.min(oldWord.length,newWord.length)&&oldWord[letters]===newWord[letters])letters++;
+  return shared>=3&&shared>=Math.ceil(before.length*.6)&&before.length-shared<=2&&after.length-shared<=3&&letters>=4;
+ };
  const output=[];
  for(let start=0;start<parts.length;){
   let end=start,growing=false;
   while(end+1<parts.length){
    const previous=key(parts[end]),next=key(parts[end+1]);
-   if(!previous||(next!==previous&&!next.startsWith(previous+' ')))break;
+   if(!previous||(next!==previous&&!revises(previous,next)))break;
    growing ||= next!==previous;end++;
   }
   // Collapse only a growing hypothesis chain; standalone repeated words survive.

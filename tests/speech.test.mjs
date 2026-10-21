@@ -31,6 +31,16 @@ test('speech previews interim revisions without duplication and saves only on Go
   session.onresult({results:plastic.slice(0,count).map(text=>result(text,true))});
  }
  assert.equal(get('entry').value,'plastic covers come Friday');
+ // A replacement can correct a word rather than extend the exact prefix.
+ const corrected=['moved over enough money to pay for sclero','moved over enough money to pay for scleral lenses'];
+ session.onresult({results:corrected.map(text=>result(text,true))});
+ assert.equal(get('entry').value,corrected[1]);
+ session.onresult({results:[result(corrected[0],true),result(corrected[1],false)]});
+ assert.equal(get('entry').value,corrected[1]);
+ session.onresult({results:[result('I paid the bill',true),result('I paid the bill',true)]});
+ assert.equal(get('entry').value,'I paid the bill I paid the bill');
+ session.onresult({results:[result('I went to the bank yesterday',true),result('I went to the store today',true)]});
+ assert.equal(get('entry').value,'I went to the bank yesterday I went to the store today');
  session.onresult({results:[...plastic.slice(0,-1).map(text=>result(text,true)),result(plastic.at(-1),false)]});
  assert.equal(get('entry').value,'plastic covers come Friday');
  session.onresult({results:[result('Yes',true),result('Yes',true)]});
