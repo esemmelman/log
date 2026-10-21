@@ -1,6 +1,7 @@
 import {createClient} from '@supabase/supabase-js';
 const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable_JOUqLZDnfGu_yCa6k6FVDQ_AYwpr72i');
 const $=id=>document.getElementById(id), entry=$('entry');
+if(/Android/i.test(navigator.userAgent))document.documentElement.classList.add('android');
 let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0;
 const check=r=>{if(r.error)throw r.error;return r.data};
 const report=message=>{$('status').textContent=message};
@@ -18,7 +19,7 @@ function render(){
  $('records').replaceChildren();
  for(const row of visible){
   const article=document.createElement('article'),time=document.createElement('time'),body=document.createElement('p');
-  time.dateTime=row.created_at;time.textContent=new Date(row.created_at).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  time.dateTime=row.created_at;time.textContent=new Date(row.created_at).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   body.textContent=row.text;article.append(time,body);$('records').append(article);
  }
  $('empty').textContent=visible.length?'':query?'No matching entries.':'No entries yet.';
@@ -117,3 +118,4 @@ async function setSession(session){
 db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
 db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
 window.addEventListener('beforeunload',e=>{if(entry.value.trim()||saving||recognition){e.preventDefault();e.returnValue=''}});
+
