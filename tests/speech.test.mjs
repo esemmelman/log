@@ -25,6 +25,19 @@ test('speech previews interim revisions without duplication and saves only on Go
  session.onresult({results:[result('send the letters',false)]});
  assert.equal(get('entry').value,'send the letters');
  assert.equal(saved.length,0);
+ // Reproduce Android's cumulative final guesses from the reported screenshot.
+ const plastic=['plastic','plastic','plastic covers','plastic covers','plastic covers come','plastic covers come Friday'];
+ for(let count=1;count<=plastic.length;count++){
+  session.onresult({results:plastic.slice(0,count).map(text=>result(text,true))});
+ }
+ assert.equal(get('entry').value,'plastic covers come Friday');
+ session.onresult({results:[...plastic.slice(0,-1).map(text=>result(text,true)),result(plastic.at(-1),false)]});
+ assert.equal(get('entry').value,'plastic covers come Friday');
+ session.onresult({results:[result('Yes',true),result('Yes',true)]});
+ assert.equal(get('entry').value,'Yes Yes');
+ session.onresult({results:[result('plastic',true),result('plasticity',true)]});
+ assert.equal(get('entry').value,'plastic plasticity');
+ assert.equal(saved.length,0);
  const final=result('Send the emails to families.',true);
  session.onresult({results:[...guesses.map(text=>result(text,false)),final]});
  assert.equal(get('entry').value,'Send the emails to families.');

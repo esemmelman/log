@@ -84,6 +84,22 @@ function finishAudio(){
  stopTimer=setTimeout(()=>textMode(),1500);
  recognition.stop();
 }
+function collapseSpeechHistory(parts){
+ const key=text=>text.trim().toLocaleLowerCase().replace(/[.,!?;:]+$/g,'').replace(/\s+/g,' ');
+ const output=[];
+ for(let start=0;start<parts.length;){
+  let end=start,growing=false;
+  while(end+1<parts.length){
+   const previous=key(parts[end]),next=key(parts[end+1]);
+   if(!previous||(next!==previous&&!next.startsWith(previous+' ')))break;
+   growing ||= next!==previous;end++;
+  }
+  // Collapse only a growing hypothesis chain; standalone repeated words survive.
+  output.push(...(growing?[parts[end]]:parts.slice(start,end+1)));
+  start=end+1;
+ }
+ return output;
+}
 function startAudio(){
  if(saving||mode==='text'||mode==='search'||recognition)return;
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -97,7 +113,7 @@ function startAudio(){
  session.onresult=e=>{
   if(recognition!==session)return;
   // Rebuild each snapshot so revised interim words replace their previous guess.
-  // Some Android engines include cumulative interim history before a final result.
+  // Android may label cumulative guesses as final, too.
   const results=Array.from(e.results),finals=results.filter(r=>r.isFinal);
   const lastFinal=results.reduce((last,r,i)=>r.isFinal?i:last,-1);
   const interim=[];
@@ -106,7 +122,9 @@ function startAudio(){
    if(previous&&text.toLocaleLowerCase().startsWith(previous.toLocaleLowerCase()))interim[interim.length-1]=text;
    else interim.push(text);
   }
-  entry.value=[...finals.map(r=>r[0].transcript),...interim].join(' ').trim();
+  let parts=[...finals.map(r=>r[0].transcript.trim()),...interim].filter(Boolean);
+  if(/Android/i.test(navigator.userAgent))parts=collapseSpeechHistory(parts);
+  entry.value=parts.join(' ').trim();
   resizeEntry();watchBlankEntry();if(mode==='audio')armSilence();
  };
  session.onerror=e=>{
