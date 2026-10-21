@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 test('speech ignores cumulative interim guesses and saves final segments once',async()=>{
  const elements=new Map(),timers=new Map(),saved=[];
- const element=()=>({value:'',classList:{add(){},remove(){}},focus(){},replaceChildren(){},append(){}});
+ const element=()=>({value:'',style:{},scrollHeight:36,classList:{add(){},remove(){}},focus(){},replaceChildren(){},append(){}});
  const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
  let session,timerId=0;
  class Speech{constructor(){session=this}start(){this.onstart()}stop(){this.onend()}abort(){}}
@@ -33,6 +33,10 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
  assert.equal(get('entry').value,'Send the emails to families. Yes yes, tomorrow.');
  for(const [id,timer] of [...timers])if(timer.ms===3000){timers.delete(id);timer.fn()}
  await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(saved.length,0);
+ get('entry').onkeydown({key:'Enter'});
+ assert.equal(saved.length,0);
+ await get('go').onclick();
  assert.equal(saved.length,1);
  assert.equal(saved[0].body,'Send the emails to families. Yes yes, tomorrow.');
  vm.runInContext('idle()',context);
@@ -52,6 +56,10 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
  assert.equal(get('entry').value,'Unfinished draft');
  assert.equal(vm.runInContext('mode',context),'text');
  assert.equal(get('empty').textContent,'No entries yet.');
+ get('entry').scrollHeight=80;
+ get('entry').oninput();
+ assert.equal(get('entry').style.height,'82px');
+ assert.equal(get('entry').placeholder,'');
 
 });
 
