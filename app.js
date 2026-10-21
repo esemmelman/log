@@ -174,13 +174,18 @@ $('signout').onclick=async()=>{
  try{check(await db.auth.signOut())}catch(e){report(e.message)}
 };
 async function setSession(session){
- const next=session?.user||null;if(user?.id===next?.id)return;
+ const next=session?.user||null;
+ $('auth').hidden=!!next;$('workspace').hidden=!next;
+ if(user?.id===next?.id)return;
  stopAudio();clearTimeout(clickTimer);loadVersion++;user=next;rows=[];itemId=null;draftId=null;entry.value='';searchDraft='';idle();render();
  $('auth').hidden=!!user;$('workspace').hidden=!user;report('');
  if(user)try{await load()}catch(e){report('Unable to load entries. '+e.message)}
 }
 db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
-db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
+db.auth.getSession().then(({data,error})=>{
+ if(error)throw error;
+ return setSession(data.session);
+}).catch(error=>{$('auth').hidden=!!user;report('Unable to restore your session. '+error.message)});
 window.addEventListener('beforeunload',e=>{if((mode==='search'?searchDraft.trim():entry.value.trim())||saving||recognition){e.preventDefault();e.returnValue=''}});
 
 
