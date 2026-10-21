@@ -4,7 +4,7 @@ const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable
 const $=id=>document.getElementById(id), entry=$('entry');
 $('version').textContent='v'+version;
 if(/Android/i.test(navigator.userAgent))document.documentElement.classList.add('android');
-let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0,searchDraft='';
+let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0,searchDraft='',blankTimer;
 const check=r=>{if(r.error)throw r.error;return r.data};
 const report=message=>{$('status').textContent=message};
 function textBody(body){
@@ -36,24 +36,34 @@ async function load(){
  rows=result.map(r=>({...r,text:textBody(r.body)}));render();
 }
 function resizeEntry(){entry.style.height='auto';entry.style.height=(entry.scrollHeight+2)+'px'}
+function watchBlankEntry(){
+ if(entry.value.trim()||saving){clearTimeout(blankTimer);blankTimer=null;return}
+ if(blankTimer)return;
+ blankTimer=setTimeout(()=>{
+  blankTimer=null;if(entry.value.trim()||saving)return;
+  clearTimeout(clickTimer);stopAudio();
+  if(mode==='search'){entry.value=searchDraft;searchDraft='';}
+  entry.value?textMode():idle();report('');render();
+ },5000);
+}
 function textMode(message=''){
- clearTimeout(clickTimer);stopAudio();mode='text';$('go').disabled=false;entry.readOnly=false;entry.placeholder='';entry.focus();resizeEntry();report(message);
+ clearTimeout(clickTimer);stopAudio();mode='text';$('go').disabled=false;entry.readOnly=false;entry.placeholder='';entry.focus();resizeEntry();report(message);watchBlankEntry();
 }
 function searchMode(){
- clearTimeout(clickTimer);if(mode==='search')return;stopAudio();searchDraft=entry.value;mode='search';entry.readOnly=false;entry.value='';entry.placeholder='Search entries';entry.focus();report('Search entries. Press Escape to return.');$('go').disabled=true;resizeEntry();render();
+ clearTimeout(clickTimer);if(mode==='search')return;stopAudio();searchDraft=entry.value;mode='search';entry.readOnly=false;entry.value='';entry.placeholder='Search entries';entry.focus();report('Search entries. Press Escape to return.');$('go').disabled=true;resizeEntry();render();watchBlankEntry();
 }
 function stopAudio(){
  clearTimeout(silenceTimer);clearTimeout(stopTimer);
  const old=recognition;recognition=null;if(old){old.onend=null;old.onresult=null;old.onerror=null;old.abort()}
  entry.classList.remove('listening');
 }
-function idle(){mode='idle';entry.readOnly=true;entry.placeholder='';entry.classList.remove('listening');$('go').disabled=false;resizeEntry()}
+function idle(){clearTimeout(blankTimer);blankTimer=null;mode='idle';entry.readOnly=true;entry.placeholder='';entry.classList.remove('listening');$('go').disabled=false;resizeEntry()}
 async function save(){
  if(mode==='search')return;
  clearTimeout(clickTimer);
  const body=entry.value.trim();if(saving||!body){if(!body){stopAudio();idle();report('No speech detected.')}return}
  if(body.length>20000){textMode('Keep entries under 20,000 characters.');return}
- saving=true;stopAudio();entry.disabled=true;$('go').disabled=true;report('Saving...');draftId??=crypto.randomUUID();
+ saving=true;clearTimeout(blankTimer);blankTimer=null;stopAudio();entry.disabled=true;$('go').disabled=true;report('Saving...');draftId??=crypto.randomUUID();
  try{
   if(!itemId){
    const items=check(await db.from('elliot_log_items_v1').select('id').eq('name','Log').order('created_at').limit(1));
@@ -97,7 +107,7 @@ function startAudio(){
    else interim.push(text);
   }
   entry.value=[...finals.map(r=>r[0].transcript),...interim].join(' ').trim();
-  resizeEntry();if(mode==='audio')armSilence();
+  resizeEntry();watchBlankEntry();if(mode==='audio')armSilence();
  };
  session.onerror=e=>{
   if(recognition!==session)return;
@@ -111,7 +121,7 @@ function startAudio(){
  };
  try{session.start()}catch(e){textMode('Unable to start the microphone. Press Go when ready.')}
 }
-entry.onclick=e=>{if(saving)return;if(e.detail===3){searchMode();return}if(mode==='text'||mode==='search')return;clearTimeout(clickTimer);if(e.detail<2)clickTimer=setTimeout(startAudio,400)};
+entry.onclick=e=>{if(saving)return;watchBlankEntry();if(e.detail===3){searchMode();return}if(mode==='text'||mode==='search')return;clearTimeout(clickTimer);if(e.detail<2)clickTimer=setTimeout(startAudio,400)};
 entry.ondblclick=()=>{if(!saving&&mode!=='search')textMode()};
 entry.onkeydown=e=>{
  if(e.isComposing)return;
@@ -120,7 +130,8 @@ entry.onkeydown=e=>{
  if(e.key==='Escape'&&mode==='search'){entry.value=searchDraft;searchDraft='';entry.value?textMode():idle();report('');render();return}
  if(e.key==='Escape'){stopAudio();entry.value?textMode():idle();report('Voice entry stopped.')}
 };
-entry.oninput=()=>{resizeEntry();if(mode==='search')render()};
+entry.onfocus=watchBlankEntry;
+entry.oninput=()=>{resizeEntry();watchBlankEntry();if(mode==='search')render()};
 $('go').onclick=()=>save();
 window.addEventListener('resize',resizeEntry);
 $('login').onsubmit=async e=>{

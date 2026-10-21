@@ -65,6 +65,24 @@ test('speech previews interim revisions without duplication and saves only on Go
  get('entry').oninput();
  assert.equal(get('entry').style.height,'82px');
  assert.equal(get('entry').placeholder,'');
+ // Empty selection cancels recognition and pending click work at five seconds.
+ function expireBlank(){
+  for(const [id,timer] of [...timers])if(timer.ms===5000){timers.delete(id);timer.fn()}
+ }
+ get('entry').value='';vm.runInContext('idle()',context);
+ get('entry').onclick({detail:1});vm.runInContext('startAudio()',context);
+ expireBlank();
+ assert.equal(vm.runInContext('mode',context),'idle');
+ assert.equal(vm.runInContext('recognition',context),null);
+ assert.equal(get('status').textContent,'');
+ assert.equal([...timers.values()].some(t=>t.ms===400),false);
+ // Drafts survive the timeout; blank search restores the previous draft.
+ get('entry').ondblclick();get('entry').value='Keep this';get('entry').oninput();
+ expireBlank();assert.equal(get('entry').value,'Keep this');
+ get('entry').onclick({detail:3});expireBlank();
+ assert.equal(get('entry').value,'Keep this');
+ assert.equal(vm.runInContext('mode',context),'text');
+ assert.equal(saved.length,1);
 
 });
 
