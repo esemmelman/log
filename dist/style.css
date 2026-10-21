@@ -4,3 +4,5 @@
 html.android{font-size:20px}html.android #entry,html.android .entry-row #go{font-size:20px}html.android .entry-row #go{flex:0 0 auto;min-width:76px;min-height:48px;padding:10px 20px}html.android article{padding:12px 2px}html.android article p{margin-top:6px}
 
 footer{display:flex;align-items:center;justify-content:space-between;gap:16px}#version{font-size:13px;color:#6a7789}
+
+@media(min-width:601px){html:not(.android) article{padding:12px 2px}html:not(.android) article p{margin-top:6px}}
