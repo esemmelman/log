@@ -4,7 +4,7 @@ const db=createClient('https://fgomaujsdblpzxhnnqrg.supabase.co','sb_publishable
 const $=id=>document.getElementById(id), entry=$('entry');
 $('version').textContent='v'+version;
 if(/Android/i.test(navigator.userAgent))document.documentElement.classList.add('android');
-let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0;
+let user=null,rows=[],itemId=null,draftId=null,saving=false,mode='idle',recognition=null,clickTimer,silenceTimer,stopTimer,loadVersion=0,searchDraft='';
 const check=r=>{if(r.error)throw r.error;return r.data};
 const report=message=>{$('status').textContent=message};
 function textBody(body){
@@ -16,7 +16,7 @@ function textBody(body){
  return doc.body.textContent.trim();
 }
 function render(){
- const query=$('search').value.trim().toLocaleLowerCase();
+ const query=mode==='search'?entry.value.trim().toLocaleLowerCase():'';
  const visible=rows.filter(r=>r.text.toLocaleLowerCase().includes(query));
  $('records').replaceChildren();
  for(const row of visible){
@@ -38,6 +38,9 @@ async function load(){
 function textMode(message='Type an entry, then press Enter to save.'){
  clearTimeout(clickTimer);stopAudio();mode='text';entry.readOnly=false;entry.placeholder='Type an entry…';entry.focus();report(message);
 }
+function searchMode(){
+ clearTimeout(clickTimer);if(mode==='search')return;stopAudio();searchDraft=entry.value;mode='search';entry.readOnly=false;entry.value='';entry.placeholder='Search entries�';entry.focus();report('Search entries. Press Escape to return.');render();
+}
 function stopAudio(){
  clearTimeout(silenceTimer);clearTimeout(stopTimer);
  const old=recognition;recognition=null;if(old){old.onend=null;old.onresult=null;old.onerror=null;old.abort()}
@@ -45,7 +48,7 @@ function stopAudio(){
 }
 function idle(){mode='idle';entry.readOnly=true;entry.placeholder='Click to speak · Double-click to type';entry.classList.remove('listening')}
 async function save(){
- const body=entry.value.trim();if(saving||!body){if(!body){stopAudio();idle();report('No speech detected. Click to try again, or double-click to type.')}return}
+ const body=entry.value.trim();if(saving||!body){if(!body){stopAudio();idle();report('No speech detected.')}return}
  if(body.length>20000){textMode('Keep entries under 20,000 characters.');return}
  saving=true;stopAudio();entry.disabled=true;report('Saving…');draftId??=crypto.randomUUID();
  try{
@@ -69,7 +72,7 @@ function finishAudio(){
  recognition.stop();
 }
 function startAudio(){
- if(saving||mode==='text'||recognition)return;
+ if(saving||mode==='text'||mode==='search'||recognition)return;
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!Speech){textMode('Voice entry is unavailable in this browser. Type an entry and press Enter.');return}
  const session=new Speech();recognition=session;mode='audio';entry.readOnly=true;
@@ -99,32 +102,33 @@ function startAudio(){
  };
  try{session.start()}catch(e){textMode('Unable to start the microphone. Type here and press Enter.')}
 }
-entry.onclick=e=>{if(mode==='text'||saving)return;clearTimeout(clickTimer);if(e.detail<2)clickTimer=setTimeout(startAudio,400)};
-entry.ondblclick=()=>{if(!saving)textMode()};
+entry.onclick=e=>{if(saving)return;if(e.detail===3){searchMode();return}if(mode==='text'||mode==='search')return;clearTimeout(clickTimer);if(e.detail<2)clickTimer=setTimeout(startAudio,400)};
+entry.ondblclick=()=>{if(!saving&&mode!=='search')textMode()};
 entry.onkeydown=e=>{
  if(e.isComposing)return;
  if(e.key==='Enter'){e.preventDefault();clearTimeout(clickTimer);if(mode==='text')save();else if(mode==='idle')startAudio()}
- if(e.key==='F2'){e.preventDefault();textMode()}
+ if(e.key==='F2'){e.preventDefault();if(mode==='search'){entry.value=searchDraft;searchDraft='';}textMode();render()}
+ if(e.key==='Escape'&&mode==='search'){entry.value=searchDraft;searchDraft='';entry.value?textMode():idle();report('');render();return}
  if(e.key==='Escape'){stopAudio();entry.value?textMode():idle();report('Voice entry stopped.')}
 };
-$('search').oninput=render;
+entry.oninput=()=>{if(mode==='search')render()};
 $('login').onsubmit=async e=>{
  e.preventDefault();const button=e.submitter;button.disabled=true;report('Signing in…');
  try{check(await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value}));$('password').value=''}catch(e){report(e.message)}finally{button.disabled=false}
 };
 $('signout').onclick=async()=>{
- if(saving||entry.value.trim()||recognition){report('Save your entry with Enter, or clear it before signing out.');return}
+ if(saving||(mode==='search'?searchDraft.trim():entry.value.trim())||recognition){report('Save your entry with Enter, or clear it before signing out.');return}
  try{check(await db.auth.signOut())}catch(e){report(e.message)}
 };
 async function setSession(session){
  const next=session?.user||null;if(user?.id===next?.id)return;
- stopAudio();clearTimeout(clickTimer);loadVersion++;user=next;rows=[];itemId=null;draftId=null;entry.value='';idle();render();
+ stopAudio();clearTimeout(clickTimer);loadVersion++;user=next;rows=[];itemId=null;draftId=null;entry.value='';searchDraft='';idle();render();
  $('auth').hidden=!!user;$('workspace').hidden=!user;report('');
  if(user)try{await load()}catch(e){report('Unable to load entries. '+e.message)}
 }
 db.auth.onAuthStateChange((event,session)=>setTimeout(()=>setSession(session),0));
 db.auth.getSession().then(({data,error})=>error?report(error.message):setSession(data.session));
-window.addEventListener('beforeunload',e=>{if(entry.value.trim()||saving||recognition){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if((mode==='search'?searchDraft.trim():entry.value.trim())||saving||recognition){e.preventDefault();e.returnValue=''}});
 
 
 

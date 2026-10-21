@@ -35,5 +35,21 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(saved.length,1);
  assert.equal(saved[0].body,'Send the emails to families. Yes yes, tomorrow.');
+ // A third click after the double-click enters search without losing a draft.
+ get('entry').value='Unfinished draft';
+ get('entry').ondblclick();
+ get('entry').onclick({detail:3});
+ assert.equal(vm.runInContext('mode',context),'search');
+ assert.equal(get('entry').value,'');
+ get('entry').value='missing entry';
+ get('entry').oninput();
+ assert.equal(get('empty').textContent,'No matching entries.');
+ get('entry').onkeydown({key:'Enter',preventDefault(){}});
+ assert.equal(saved.length,1);
+ get('entry').onkeydown({key:'Escape'});
+ assert.equal(get('entry').value,'Unfinished draft');
+ assert.equal(vm.runInContext('mode',context),'text');
+ assert.equal(get('empty').textContent,'No entries yet.');
+
 });
 
