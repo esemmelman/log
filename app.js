@@ -79,18 +79,24 @@ function startAudio(){
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!Speech){textMode('Voice entry is unavailable in this browser. Press Go when ready.');return}
  const session=new Speech();recognition=session;mode='audio';entry.readOnly=true;
- session.continuous=true;session.interimResults=false;session.lang=navigator.language||'en-US';
+ session.continuous=true;session.interimResults=true;session.lang=navigator.language||'en-US';
  entry.classList.add('listening');report('Listening... Press Go when ready.');
  session.onstart=()=>armSilence();
  session.onspeechstart=()=>clearTimeout(silenceTimer);
  session.onspeechend=()=>armSilence();
  session.onresult=e=>{
   if(recognition!==session)return;
-  // Android can return a history of growing interim hypotheses. Only final
-  // segments belong in the entry; rebuild from the session snapshot on each event.
-  const finalResults=Array.from(e.results).filter(r=>r.isFinal);
-  if(!finalResults.length)return;
-  entry.value=finalResults.map(r=>r[0].transcript).join(' ').trim();
+  // Rebuild each snapshot so revised interim words replace their previous guess.
+  // Some Android engines include cumulative interim history before a final result.
+  const results=Array.from(e.results),finals=results.filter(r=>r.isFinal);
+  const lastFinal=results.reduce((last,r,i)=>r.isFinal?i:last,-1);
+  const interim=[];
+  for(const result of results.slice(lastFinal+1)){
+   const text=result[0].transcript.trim(),previous=interim.at(-1);
+   if(previous&&text.toLocaleLowerCase().startsWith(previous.toLocaleLowerCase()))interim[interim.length-1]=text;
+   else interim.push(text);
+  }
+  entry.value=[...finals.map(r=>r[0].transcript),...interim].join(' ').trim();
   resizeEntry();if(mode==='audio')armSilence();
  };
  session.onerror=e=>{

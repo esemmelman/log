@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-test('speech ignores cumulative interim guesses and saves final segments once',async()=>{
+test('speech previews interim revisions without duplication and saves only on Go',async()=>{
  const elements=new Map(),timers=new Map(),saved=[];
  const element=()=>({value:'',style:{},scrollHeight:36,classList:{add(){},remove(){}},focus(){},replaceChildren(){},append(){}});
  const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
@@ -17,17 +17,22 @@ test('speech ignores cumulative interim guesses and saves final segments once',a
  const context=vm.createContext({version:'test',createClient:()=>db,document:{getElementById:get,createElement:element,documentElement:element()},window:{SpeechRecognition:Speech,addEventListener(){}},navigator:{userAgent:'Android',language:'en-US'},crypto:{randomUUID:()=> 'stable-id'},setTimeout(fn,ms){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)}});
  vm.runInContext(fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,''),context);
  vm.runInContext('startAudio()',context);
- assert.equal(session.interimResults,false);
+ assert.equal(session.interimResults,true);
  const result=(text,isFinal)=>Object.assign([{transcript:text}],{isFinal});
  const guesses=['send','send the','send the emails','send the emails to families'];
  session.onresult({results:guesses.map(text=>result(text,false))});
- assert.equal(get('entry').value,'');
+ assert.equal(get('entry').value,'send the emails to families');
+ session.onresult({results:[result('send the letters',false)]});
+ assert.equal(get('entry').value,'send the letters');
+ assert.equal(saved.length,0);
  const final=result('Send the emails to families.',true);
  session.onresult({results:[...guesses.map(text=>result(text,false)),final]});
  assert.equal(get('entry').value,'Send the emails to families.');
  session.onresult({results:[final]});
  assert.equal(get('entry').value,'Send the emails to families.');
  // Separate final segments, including intentional repetitions, must survive.
+ session.onresult({results:[final,result('Yes yes',false)]});
+ assert.equal(get('entry').value,'Send the emails to families. Yes yes');
  const second=result('Yes yes, tomorrow.',true);
  session.onresult({results:[final,second]});
  assert.equal(get('entry').value,'Send the emails to families. Yes yes, tomorrow.');
